@@ -29,20 +29,25 @@ class App extends Component {
     msg: 'Use the box in the top left corner to search iTunes',
   };
 
-  fetch( forceFetch = false ) {    
+  async fetch( forceFetch = false ) {    
     if (this.noFetching && !forceFetch) return;
     this.noFetching = true;
     this.setState({ msg: 'Loading, please wait ...' }); 
-    const req = `${URL}&term=${this.state.terms}&offset=${this.state.offset}`;
-    fetchJsonp(req)
-    .then( response => response.json().then( data => this.setState({
-      list: [...this.state.list, ...data.results],  
-      offset: this.state.offset + data.resultCount,       
-      msg: data.resultCount<LIMIT?`
-        There are no${this.state.list.length||data.resultCount?' more ':' '}results
-        `:'',
-    }, () => { this.noFetching = data.resultCount<LIMIT } )))
-    .catch( err => this.setState({ msg: `Houston, we have a problem. ${err}` }));
+    try {
+      const req = `${URL}&term=${this.state.terms}&offset=${this.state.offset}`,
+            response = await fetchJsonp(req),
+            data = await response.json();
+      this.setState({
+        list: [...this.state.list, ...data.results],  
+        offset: this.state.offset + data.resultCount,       
+        msg: data.resultCount<LIMIT?`
+          There are no${this.state.list.length||data.resultCount?' more ':' '}results
+          `:'',
+      }, () => { this.noFetching = data.resultCount<LIMIT } );
+    } catch(err) {
+      this.setState({ msg: `Houston, we have a problem: ${err.message}` });
+    } 
+
   }   
 
   handleSubmit = () => this.setState({ 
@@ -100,7 +105,7 @@ class App extends Component {
                   <button onClick={ () => this.fetch() } type="button" className="btn btn-secondary">Load More</button>
                 </div>              
               }
-              <div className="row">{this.state.msg} {this.state.err}</div>
+              <div className="row">{this.state.msg}</div>
             </div>
           </div>
         </div>
