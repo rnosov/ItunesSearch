@@ -8,14 +8,14 @@
  */
 
 import React, { Component } from 'react';
-import jsonp from 'jsonp';
+import fetchJsonp from 'fetch-jsonp';
 import Navbar from './Navbar';
 import List from './List';
 
 const ENDPOINT = 'https://itunes.apple.com/search',
       ENTITY = ['musicArtist', 'album', 'musicTrack'],
       COUNTRY = 'GB',
-      LIMIT = 10,      
+      LIMIT = 10,
       URL = `${ENDPOINT}?country=${COUNTRY}&entity=${ENTITY.join()}&limit=${LIMIT}`;
 
 class App extends Component {
@@ -33,22 +33,23 @@ class App extends Component {
     if (this.noFetching && !forceFetch) return;
     this.noFetching = true;
     this.setState({ msg: 'Loading, please wait ...' }); 
-    const url = `${URL}&term=${encodeURIComponent(this.state.terms)}&offset=${this.state.offset}`;
-    jsonp(url, (err,data) => this.setState({
-      err,
+    const req = `${URL}&term=${this.state.terms}&offset=${this.state.offset}`;
+    fetchJsonp(req)
+    .then( response => response.json().then( data => this.setState({
       list: [...this.state.list, ...data.results],  
       offset: this.state.offset + data.resultCount,       
       msg: data.resultCount<LIMIT?`
         There are no${this.state.list.length||data.resultCount?' more ':' '}results
         `:'',
-    }, () => { this.noFetching = data.resultCount<LIMIT } ));      
-  };
+    }, () => { this.noFetching = data.resultCount<LIMIT } )))
+    .catch( err => this.setState({ msg: `Houston, we have a problem. ${err}` }));
+  }   
 
   handleSubmit = () => this.setState({ 
     list: [], 
     toggles: {}, 
     offset: 0,    
-    terms: this.searchField.value 
+    terms: encodeURIComponent(this.searchField.value)
   }, () => this.fetch(true) ); 
   
   handleToggle = (index) => {
